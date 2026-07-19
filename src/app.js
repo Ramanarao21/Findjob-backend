@@ -14,29 +14,8 @@ const companyRoutes = require('./routes/companyRoutes');
 const app = express();
 
 // Middlewares
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://find-job-frontend-theta.vercel.app',
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+app.use(cors({ origin: '*' }));
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow server-to-server / curl requests with no origin
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS blocked: ${origin} not allowed`), false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
-// Handle OPTIONS preflight requests explicitly
-app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
