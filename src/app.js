@@ -30,13 +30,15 @@ app.get('/', (req, res) => {
 });
 
 // Mount Module Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/companies', companyRoutes);
-app.use('/api/saved-jobs', savedJobRoutes);
-app.use('/api/applications', applicationRoutes);
-app.use('/api/pro', proRoutes);
+// Note: Routes are mounted without /api prefix because Vercel intercepts /api/* as serverless functions.
+// The frontend must call /api/* which Vercel rewrites to api/index.js, stripping the /api prefix before Express sees it.
+app.use('/auth', authRoutes);
+app.use('/profile', profileRoutes);
+app.use('/jobs', jobRoutes);
+app.use('/companies', companyRoutes);
+app.use('/saved-jobs', savedJobRoutes);
+app.use('/applications', applicationRoutes);
+app.use('/pro', proRoutes);
 
 // Error Handling Middlewares
 app.use(notFound);
