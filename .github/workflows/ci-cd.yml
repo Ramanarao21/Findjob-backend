@@ -1,0 +1,115 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop, dev ]
+  pull_request:
+    branches: [ main, master, develop, dev ]
+  workflow_dispatch:
+
+jobs:
+  lint-and-syntax:
+    name: Lint & Syntax Check
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify JavaScript Syntax
+        run: npm run lint
+
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Execute automated tests
+        env:
+          PORT: 5001
+          NODE_ENV: test
+          MONGO_URI: mongodb://localhost:27017/findjob_test
+          JWT_SECRET: test_jwt_secret_key_ci_cd_12345
+          JWT_EXPIRES_IN: 1d
+          DEFAULT_AVATAR_URL: https://cdn-icons-png.flaticon.com/512/149/149071.png
+        run: npm test
+
+  docker-build:
+    name: Docker Container Build Check
+    needs: [lint-and-syntax, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: findjob-backend:latest
+
+  deploy:
+    name: Deploy to Production
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy Trigger Step
+        run: |
+          echo "============================================"
+          echo "🚀 Deploying FindJob Backend to Production..."
+          echo "============================================"
+          # To enable automated deployment to Render/Railway/AWS/Heroku:
+          # Add your deployment webhook curl or CLI deployment action here.
+          # Example:
+          # curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
